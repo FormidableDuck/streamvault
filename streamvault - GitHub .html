@@ -830,11 +830,11 @@
       <div class="settings-section-title">Emby Server</div>
       <div id="embyMixedContentWarning" style="display:none;background:rgba(232,184,75,0.08);border:1px solid var(--gold-dim);border-radius:var(--r-sm);padding:10px 12px;font-size:12px;color:var(--gold);line-height:1.6;margin-bottom:12px">
         ⚠️ <strong>Mixed content blocked.</strong> Your browser is blocking HTTP requests to Emby because this page is open as a <code>file://</code> URL.<br><br>
-        <strong>Fix:</strong> In Chrome/Edge, go to <code>chrome://flags</code> and search for <em>"Insecure origins"</em>, then add <code>http://81.103.22.25:8096</code>. Or open the HTML via a local server (VS Code Live Server, Python's <code>http.server</code>). Firefox may work without this step.
+        <strong>Fix:</strong> In Chrome/Edge, go to <code>chrome://flags</code> and search for <em>"Insecure origins"</em>, then add <code>http://xx.xxx.xx.xx:xxxx</code>. Or open the HTML via a local server (VS Code Live Server, Python's <code>http.server</code>). Firefox may work without this step.
       </div>
       <div class="setting-row">
         <label class="setting-label" for="embyUrl">Server URL</label>
-        <input type="text" class="setting-input" id="embyUrl" placeholder="http://81.103.22.25:8096" oninput="checkEmbyUrl(this)">
+        <input type="text" class="setting-input" id="embyUrl" placeholder="http://xx.xxx.xx.xx:xxxx" oninput="checkEmbyUrl(this)">
         <div class="setting-hint" id="embyUrlHint">Include http:// and port number</div>
       </div>
       <div class="setting-row">
@@ -902,7 +902,7 @@ const SETTINGS_KEY = 'streamvault_settings_v2';
 
 let settings = {
   tmdbKey: '',
-  embyUrl: 'http://81.103.22.25:8096',
+  embyUrl: '',
   embyToken: '',    // session token obtained via username/password login
   embyUserId: '',   // returned by login
 };
@@ -971,7 +971,7 @@ function loadSettings() {
     settings = { ...settings, ...s };
   } catch(e) {}
   document.getElementById('tmdbKey').value    = settings.tmdbKey || '';
-  document.getElementById('embyUrl').value    = settings.embyUrl || 'http://81.103.22.25:8096';
+  document.getElementById('embyUrl').value    = settings.embyUrl || '';
   // Don't repopulate password — just show connection state
   updateStatusIndicators();
 }
