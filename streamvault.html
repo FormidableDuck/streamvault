@@ -1347,11 +1347,26 @@ async function loadMore() {
     } else {
       ({ results: tmdbResults } = await browseTMDB(nextPage));
     }
+    // Note: searchTMDB/browseTMDB already call enrichWithProviders internally,
+    // so tmdbResults arrives pre-enriched — don't enrich again here, that
+    // would double-push platform tags onto each item (duplicate badges).
 
-    const enriched = await enrichWithProviders(tmdbResults);
-    const tagged = await tagWithEmby(enriched);
+    const tagged = await tagWithEmby(tmdbResults);
 
-    STATE.rawResults.push(...tagged.filter(i => i.platforms.length > 0));
+    // TMDB pages can overlap — the same title (esp. items sharing a release
+    // date) sometimes appears on both page N and page N+1. Dedupe by
+    // id + media_type before appending, otherwise infinite scroll shows
+    // the same card twice.
+    const seen = new Set(STATE.rawResults.map(i => `${i.media_type}-${i.id}`));
+    const fresh = tagged.filter(i => {
+      if (!i.platforms.length) return false;
+      const key = `${i.media_type}-${i.id}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    STATE.rawResults.push(...fresh);
     STATE.page = nextPage;
     applyFilters(true); // true = append mode, preserve scroll position
   } catch(err) {
@@ -1713,9 +1728,20 @@ function renderResults(items, append = false) {
   }
 
   const grid = document.getElementById('resultsGrid');
-  if (!append) grid.innerHTML = '';
 
-  filtered.forEach(item => grid.appendChild(buildCard(item)));
+  if (!append) {
+    grid.innerHTML = '';
+    filtered.forEach(item => grid.appendChild(buildCard(item)));
+  } else {
+    // `items`/`filtered` is the full cumulative list across all pages
+    // fetched so far (STATE.results re-filtered+sorted). The grid already
+    // has cards for everything rendered on previous pages, so only append
+    // the new tail — re-appending the whole array would duplicate every
+    // card already in the DOM.
+    const alreadyRendered = grid.children.length;
+    const newItems = filtered.slice(alreadyRendered);
+    newItems.forEach(item => grid.appendChild(buildCard(item)));
+  }
 
   // (Re)place the infinite-scroll sentinel at the end of the grid
   positionSentinel();
