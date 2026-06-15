@@ -1,10 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="apple-touch-icon" href="/IMG_6554.jpeg>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StreamVault</title>
+
+<!-- iOS home screen icon (Add to Home Screen will use this) -->
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<!-- Browser tab icon -->
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+
+<!-- Launch fullscreen (no Safari address bar) when opened from home screen -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StreamVault">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -1497,25 +1507,49 @@ async function enrichWithProviders(items) {
   );
 
   const enriched = await Promise.all(items.map(async item => {
-    try {
-      const url = `https://api.themoviedb.org/3/${item.media_type}/${item.id}/watch/providers`;
-      const r = await fetch(url, { headers });
-      if (!r.ok) return item;
-      const d = await r.json();
-      const gb = (d.results || {}).GB || {};
-      const allProviders = [
-        ...(gb.flatrate || []),
-        ...(gb.free || []),
-        ...(gb.ads || []),
-      ];
-      const providerIds = new Set(allProviders.map(p => p.provider_id));
+    // Fetch watch providers and runtime/genre details in parallel — both
+    // are needed up-front (not just on modal open) so the runtime filter
+    // and card "X min" badge work correctly from the results grid.
+    const [providersResult, detailsResult] = await Promise.allSettled([
+      fetch(`https://api.themoviedb.org/3/${item.media_type}/${item.id}/watch/providers`, { headers }),
+      fetch(`https://api.themoviedb.org/3/${item.media_type}/${item.id}?language=en-GB`, { headers }),
+    ]);
 
-      Object.entries(UK_PROVIDERS).forEach(([key, prov]) => {
-        if (prov.id !== -1 && providerIds.has(prov.id) && ACTIVE_IDS.has(prov.id)) {
-          item.platforms.push(key);
+    if (providersResult.status === 'fulfilled' && providersResult.value.ok) {
+      try {
+        const d = await providersResult.value.json();
+        const gb = (d.results || {}).GB || {};
+        const allProviders = [
+          ...(gb.flatrate || []),
+          ...(gb.free || []),
+          ...(gb.ads || []),
+        ];
+        const providerIds = new Set(allProviders.map(p => p.provider_id));
+
+        Object.entries(UK_PROVIDERS).forEach(([key, prov]) => {
+          if (prov.id !== -1 && providerIds.has(prov.id) && ACTIVE_IDS.has(prov.id)) {
+            item.platforms.push(key);
+          }
+        });
+      } catch(e) {}
+    }
+
+    if (detailsResult.status === 'fulfilled' && detailsResult.value.ok) {
+      try {
+        const d = await detailsResult.value.json();
+        // Movies: 'runtime' (minutes). TV: 'episode_run_time' is an array,
+        // typically one value per season — take the first as a representative figure.
+        item.runtime = d.runtime || (Array.isArray(d.episode_run_time) && d.episode_run_time[0]) || null;
+        // Genre IDs from /search and /discover should already match this, but
+        // /discover with with_genres can occasionally omit genres the filter
+        // didn't request — refresh from the canonical details response.
+        if (Array.isArray(d.genres) && d.genres.length) {
+          item.genre_ids = d.genres.map(g => g.id);
         }
-      });
-    } catch(e) {}
+        if (Array.isArray(d.seasons)) item.seasons = d.seasons.length;
+      } catch(e) {}
+    }
+
     return item;
   }));
 
@@ -1524,7 +1558,10 @@ async function enrichWithProviders(items) {
 
 async function fetchItemDetails(item) {
   const token = settings.tmdbKey;
-  if (item.isEmbyOnly || !token) return item;
+  // runtime, genre_ids, and seasons are already populated by enrichWithProviders
+  // at search/browse time. The only thing still missing for the modal is the
+  // director, which requires append_to_response=credits — only fetch that here.
+  if (item.isEmbyOnly || !token || item.director) return item;
   try {
     const r = await fetch(
       `https://api.themoviedb.org/3/${item.media_type}/${item.id}?language=en-GB&append_to_response=credits`,
@@ -1532,13 +1569,10 @@ async function fetchItemDetails(item) {
     );
     if (!r.ok) return item;
     const d = await r.json();
-    item.runtime = d.runtime || (d.episode_run_time && d.episode_run_time[0]) || null;
-    item.genre_ids = (d.genres || []).map(g => g.id);
     if (d.credits) {
       const director = (d.credits.crew || []).find(c => c.job === 'Director');
       item.director = director ? director.name : '';
     }
-    if (d.seasons) item.seasons = d.seasons.length;
   } catch(e) {}
   return item;
 }
