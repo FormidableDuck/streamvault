@@ -1,0 +1,1903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StreamVault</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ── TOKENS ──────────────────────────────────────────── */
+  :root {
+    --void:    #0A0A0F;
+    --deep:    #12121A;
+    --surface: #1C1C28;
+    --rim:     #2A2A3A;
+    --muted:   #5A5A72;
+    --soft:    #9090A8;
+    --body:    #C8C8DC;
+    --bright:  #F0F0F8;
+    --gold:    #E8B84B;
+    --gold-dim:#8A6A1E;
+    --netflix: #E50914;
+    --prime:   #00A8E0;
+    --apple:   #A2AAAD;
+    --emby:    #52B54B;
+    --disney:  #01D2FF;
+    --now:     #FFD24C;
+    --britbox: #E01A4F;
+    --paramount: #0064FF;
+    --itvx:    #FFA52B;
+    --ch4:     #76FF00;
+    --my5:     #FF0099;
+
+    --r-sm: 6px;
+    --r-md: 12px;
+    --r-lg: 20px;
+    --r-xl: 28px;
+
+    --font-display: 'DM Serif Display', Georgia, serif;
+    --font-body:    'Inter', system-ui, sans-serif;
+    --font-mono:    'JetBrains Mono', monospace;
+
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* ── RESET ───────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { height: 100%; }
+  body {
+    min-height: 100%;
+    background: var(--void);
+    color: var(--body);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { cursor: pointer; border: none; background: none; font: inherit; }
+  input, select { font: inherit; }
+  a { color: inherit; text-decoration: none; }
+  img { display: block; max-width: 100%; }
+
+  /* ── LAYOUT ──────────────────────────────────────────── */
+  .app { display: flex; flex-direction: column; min-height: 100vh; }
+
+  /* ── HEADER ──────────────────────────────────────────── */
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px;
+    height: 60px;
+    background: rgba(10,10,15,0.88);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--rim);
+  }
+  .logo {
+    font-family: var(--font-display);
+    font-size: 22px;
+    color: var(--bright);
+    letter-spacing: -0.3px;
+    display: flex; align-items: baseline; gap: 3px;
+  }
+  .logo span {
+    color: var(--gold);
+    font-style: italic;
+  }
+  .header-actions { display: flex; align-items: center; gap: 10px; }
+  .icon-btn {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--soft);
+    transition: background 0.15s, color 0.15s;
+    border: 1px solid transparent;
+  }
+  .icon-btn:hover { background: var(--surface); color: var(--bright); }
+  .icon-btn.active { background: var(--surface); color: var(--gold); border-color: var(--gold-dim); }
+  .icon-btn svg { width: 18px; height: 18px; }
+
+  /* ── SEARCH HERO ─────────────────────────────────────── */
+  .search-section {
+    background: linear-gradient(180deg, var(--deep) 0%, var(--void) 100%);
+    padding: 40px 24px 32px;
+    border-bottom: 1px solid var(--rim);
+  }
+  .search-wrap {
+    max-width: 720px; margin: 0 auto;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .search-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .search-row {
+    display: flex; gap: 10px;
+  }
+  .search-input-wrap {
+    flex: 1; position: relative;
+  }
+  .search-input-wrap svg {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    width: 18px; height: 18px; color: var(--muted);
+    pointer-events: none;
+  }
+  .search-input {
+    width: 100%; height: 48px;
+    padding: 0 14px 0 44px;
+    background: var(--surface);
+    border: 1px solid var(--rim);
+    border-radius: var(--r-md);
+    color: var(--bright);
+    font-size: 16px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    outline: none;
+  }
+  .search-input::placeholder { color: var(--muted); }
+  .search-input:focus {
+    border-color: var(--gold-dim);
+    box-shadow: 0 0 0 3px rgba(232,184,75,0.12);
+  }
+  .search-btn {
+    height: 48px; padding: 0 24px;
+    background: var(--gold);
+    color: var(--void);
+    font-weight: 600;
+    font-size: 14px;
+    border-radius: var(--r-md);
+    transition: opacity 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+  .search-btn:hover { opacity: 0.9; }
+  .search-btn:active { transform: scale(0.98); }
+  .search-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── FILTERS ─────────────────────────────────────────── */
+  .filters {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    max-width: 720px; margin: 0 auto;
+  }
+  .filter-select {
+    height: 36px; padding: 0 12px;
+    background: var(--surface);
+    border: 1px solid var(--rim);
+    border-radius: var(--r-sm);
+    color: var(--body);
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235A5A72' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px;
+  }
+  .filter-select:focus { border-color: var(--gold-dim); }
+  .filter-select option { background: var(--surface); }
+  .filter-toggle-group { display: flex; gap: 0; }
+  .filter-toggle {
+    height: 36px; padding: 0 14px;
+    background: var(--surface);
+    border: 1px solid var(--rim);
+    color: var(--soft);
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .filter-toggle:first-child { border-radius: var(--r-sm) 0 0 var(--r-sm); }
+  .filter-toggle:last-child { border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+  .filter-toggle:not(:first-child) { border-left: none; }
+  .filter-toggle.active {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: var(--void);
+  }
+
+  /* ── PLATFORM FILTERS ────────────────────────────────── */
+  .platform-filters {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    max-width: 720px; margin: 0 auto;
+  }
+  .platform-pill {
+    height: 30px; padding: 0 12px;
+    border-radius: 99px;
+    font-size: 12px; font-weight: 500;
+    border: 1px solid var(--rim);
+    color: var(--muted);
+    background: var(--surface);
+    transition: all 0.15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .platform-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .platform-pill.active-netflix { background: rgba(229,9,20,0.15); border-color: var(--netflix); color: var(--netflix); }
+  .platform-pill.active-prime   { background: rgba(0,168,224,0.15); border-color: var(--prime);   color: var(--prime); }
+  .platform-pill.active-apple   { background: rgba(162,170,173,0.15); border-color: var(--apple); color: var(--apple); }
+  .platform-pill.active-emby    { background: rgba(82,181,75,0.15);  border-color: var(--emby);   color: var(--emby); }
+  .platform-pill.active-disney  { background: rgba(1,210,255,0.15);  border-color: var(--disney); color: var(--disney); }
+  .platform-pill.active-now     { background: rgba(255,210,76,0.15); border-color: var(--now);    color: var(--now); }
+  .platform-pill.active-britbox { background: rgba(224,26,79,0.15);  border-color: var(--britbox);color: var(--britbox); }
+  .platform-pill.active-paramount { background: rgba(0,100,255,0.15); border-color: var(--paramount); color: var(--paramount); }
+  .platform-pill.active-itvx    { background: rgba(255,165,43,0.15); border-color: var(--itvx);   color: var(--itvx); }
+  .platform-pill.active-ch4     { background: rgba(118,255,0,0.15);  border-color: var(--ch4);    color: var(--ch4); }
+  .platform-pill.active-my5     { background: rgba(255,0,153,0.15);  border-color: var(--my5);    color: var(--my5); }
+
+  /* ── MAIN CONTENT ────────────────────────────────────── */
+  .main { flex: 1; padding: 28px 24px; }
+  .results-header {
+    display: flex; align-items: center; justify-content: space-between;
+    max-width: 1300px; margin: 0 auto 20px;
+  }
+  .results-count {
+    font-size: 13px; color: var(--muted);
+  }
+  .results-count strong { color: var(--soft); }
+  .sort-select {
+    height: 32px; padding: 0 10px;
+    background: var(--surface);
+    border: 1px solid var(--rim);
+    border-radius: var(--r-sm);
+    color: var(--body); font-size: 13px;
+    outline: none; appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235A5A72' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 26px;
+  }
+
+  /* ── GRID ────────────────────────────────────────────── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 16px;
+    max-width: 1300px; margin: 0 auto;
+  }
+  @media (min-width: 640px) {
+    .grid { grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); }
+  }
+
+  /* ── CARD ────────────────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--rim);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s var(--ease-out), border-color 0.2s, box-shadow 0.2s;
+    position: relative;
+  }
+  .card:hover {
+    transform: translateY(-4px);
+    border-color: var(--gold-dim);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(232,184,75,0.1);
+  }
+  .card-poster {
+    aspect-ratio: 2/3;
+    background: var(--deep);
+    position: relative;
+    overflow: hidden;
+  }
+  .card-poster img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s var(--ease-out);
+  }
+  .card:hover .card-poster img { transform: scale(1.04); }
+  .poster-fallback {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 8px;
+    background: linear-gradient(135deg, var(--deep) 0%, var(--surface) 100%);
+    color: var(--muted);
+  }
+  .poster-fallback svg { width: 32px; height: 32px; opacity: 0.4; }
+  .poster-fallback span { font-size: 11px; opacity: 0.5; text-align: center; padding: 0 8px; }
+  .card-badges {
+    position: absolute; top: 8px; left: 8px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .badge {
+    height: 20px; padding: 0 7px;
+    border-radius: 4px;
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.5px;
+    display: flex; align-items: center;
+    white-space: nowrap;
+    backdrop-filter: blur(8px);
+  }
+  .badge-netflix { background: rgba(229,9,20,0.85);  color: #fff; }
+  .badge-prime   { background: rgba(0,168,224,0.85); color: #fff; }
+  .badge-apple   { background: rgba(30,30,30,0.85);  color: var(--apple); border: 1px solid rgba(162,170,173,0.3); }
+  .badge-emby    { background: rgba(82,181,75,0.85); color: #fff; }
+  .badge-disney  { background: rgba(1,210,255,0.85); color: #062236; }
+  .badge-now     { background: rgba(255,210,76,0.85); color: #2b2200; }
+  .badge-britbox { background: rgba(224,26,79,0.85); color: #fff; }
+  .badge-paramount { background: rgba(0,100,255,0.85); color: #fff; }
+  .badge-itvx    { background: rgba(255,165,43,0.85); color: #2b1800; }
+  .badge-ch4     { background: rgba(118,255,0,0.85); color: #122b00; }
+  .badge-my5     { background: rgba(255,0,153,0.85); color: #fff; }
+  .type-badge {
+    position: absolute; top: 8px; right: 8px;
+    height: 20px; padding: 0 7px;
+    border-radius: 4px;
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.8px; text-transform: uppercase;
+    background: rgba(10,10,15,0.7);
+    backdrop-filter: blur(8px);
+    color: var(--soft);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .card-info { padding: 12px 12px 14px; }
+  .card-title {
+    font-size: 13px; font-weight: 600;
+    color: var(--bright);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 5px;
+  }
+  .card-meta {
+    font-size: 11px; color: var(--muted);
+    display: flex; gap: 8px; align-items: center;
+    font-family: var(--font-mono);
+  }
+  .card-meta span::before { content: '·'; margin-right: 8px; }
+  .card-meta span:first-child::before { content: ''; margin-right: 0; }
+  .card-rating {
+    margin-top: 6px;
+    display: flex; align-items: center; gap: 4px;
+    font-size: 11px; color: var(--gold);
+    font-family: var(--font-mono);
+  }
+  .card-rating svg { width: 11px; height: 11px; fill: var(--gold); }
+
+  /* ── EMPTY / LOADING ─────────────────────────────────── */
+  .state-panel {
+    max-width: 380px; margin: 80px auto;
+    text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
+  .state-panel svg { width: 48px; height: 48px; color: var(--muted); opacity: 0.5; }
+  .state-panel h3 { font-family: var(--font-display); font-size: 22px; color: var(--bright); }
+  .state-panel p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--rim);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .platform-group-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 24px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--rim);
+    max-width: 1300px;
+  }
+
+  /* ── MODAL ───────────────────────────────────────────── */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(8px);
+    display: flex; align-items: flex-end; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  @media (min-width: 600px) {
+    .modal-overlay { align-items: center; }
+  }
+  .modal {
+    background: var(--deep);
+    border: 1px solid var(--rim);
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+    width: 100%; max-width: 640px;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: translateY(30px);
+    transition: transform 0.3s var(--ease-out);
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  @media (min-width: 600px) {
+    .modal { border-radius: var(--r-xl); }
+  }
+  .modal-backdrop {
+    height: 220px; position: relative; overflow: hidden;
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .modal-backdrop img {
+    width: 100%; height: 100%; object-fit: cover; opacity: 0.5;
+  }
+  .modal-backdrop-gradient {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, transparent 30%, var(--deep) 100%);
+  }
+  .modal-close {
+    position: absolute; top: 14px; right: 14px;
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+    color: var(--bright);
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+    z-index: 2;
+  }
+  .modal-close:hover { background: rgba(0,0,0,0.8); }
+  .modal-close svg { width: 16px; height: 16px; }
+  .modal-body { padding: 16px 24px 32px; }
+  .modal-type {
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 6px;
+  }
+  .modal-title {
+    font-family: var(--font-display);
+    font-size: 26px; color: var(--bright);
+    line-height: 1.2; margin-bottom: 10px;
+  }
+  .modal-facts {
+    display: flex; flex-wrap: wrap; gap: 16px;
+    margin-bottom: 14px;
+  }
+  .modal-fact { font-size: 12px; color: var(--soft); font-family: var(--font-mono); }
+  .modal-fact strong { color: var(--body); display: block; font-size: 13px; font-family: var(--font-body); }
+  .modal-overview {
+    font-size: 14px; color: var(--soft); line-height: 1.7;
+    margin-bottom: 20px;
+  }
+  .modal-platforms { margin-bottom: 24px; }
+  .modal-platforms-label {
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 1.2px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 10px;
+  }
+  .watch-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+  .watch-btn {
+    height: 44px; padding: 0 20px;
+    border-radius: var(--r-md);
+    font-size: 14px; font-weight: 600;
+    display: flex; align-items: center; gap: 8px;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .watch-btn:hover { opacity: 0.88; }
+  .watch-btn:active { transform: scale(0.97); }
+  .watch-btn svg { width: 16px; height: 16px; }
+  .watch-btn-netflix { background: var(--netflix); color: #fff; }
+  .watch-btn-prime   { background: var(--prime);   color: #fff; }
+  .watch-btn-apple   { background: #1d1d1f; color: var(--apple); border: 1px solid rgba(162,170,173,0.3); }
+  .watch-btn-emby    { background: var(--emby);   color: #fff; }
+  .watch-btn-disney  { background: var(--disney); color: #062236; }
+  .watch-btn-now     { background: var(--now);    color: #2b2200; }
+  .watch-btn-britbox { background: var(--britbox);color: #fff; }
+  .watch-btn-paramount { background: var(--paramount); color: #fff; }
+  .watch-btn-itvx    { background: var(--itvx);   color: #2b1800; }
+  .watch-btn-ch4     { background: var(--ch4);    color: #122b00; }
+  .watch-btn-my5     { background: var(--my5);    color: #fff; }
+  .modal-genres { display: flex; flex-wrap: wrap; gap: 6px; }
+  .genre-tag {
+    height: 26px; padding: 0 10px;
+    border-radius: 4px;
+    font-size: 11px; font-weight: 500;
+    background: var(--surface);
+    border: 1px solid var(--rim);
+    color: var(--soft);
+  }
+
+  /* ── SETTINGS PANEL ──────────────────────────────────── */
+  .settings-panel {
+    position: fixed; inset: 0; z-index: 300;
+    display: flex; flex-direction: column;
+    background: var(--void);
+    transform: translateX(100%);
+    transition: transform 0.3s var(--ease-out);
+  }
+  .settings-panel.open { transform: none; }
+  @media (min-width: 500px) {
+    .settings-panel {
+      left: auto; width: 400px;
+      border-left: 1px solid var(--rim);
+      box-shadow: -20px 0 60px rgba(0,0,0,0.5);
+    }
+  }
+  .settings-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--rim);
+    background: var(--deep);
+  }
+  .settings-header h2 {
+    font-family: var(--font-display); font-size: 20px; color: var(--bright);
+  }
+  .settings-body { flex: 1; overflow-y: auto; padding: 24px 20px; }
+  .settings-section { margin-bottom: 28px; }
+  .settings-section-title {
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 14px;
+  }
+  .setting-row { margin-bottom: 14px; }
+  .setting-label {
+    display: block; font-size: 13px; font-weight: 500;
+    color: var(--body); margin-bottom: 5px;
+  }
+  .setting-hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .setting-input {
+    width: 100%; height: 40px; padding: 0 12px;
+    background: var(--surface);
+    border: 1px solid var(--rim);
+    border-radius: var(--r-sm);
+    color: var(--bright); font-size: 14px;
+    outline: none; transition: border-color 0.15s;
+    font-family: var(--font-mono);
+  }
+  .setting-input:focus { border-color: var(--gold-dim); }
+  .settings-save {
+    display: block; width: 100%; height: 44px;
+    background: var(--gold); color: var(--void);
+    font-weight: 600; font-size: 15px;
+    border-radius: var(--r-md);
+    transition: opacity 0.15s;
+    margin-top: 8px;
+  }
+  .settings-save:hover { opacity: 0.9; }
+  .status-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--rim);
+    border-radius: var(--r-sm);
+    font-size: 12px; color: var(--soft);
+    margin-top: 10px;
+  }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted); flex-shrink: 0;
+  }
+  .status-dot.ok { background: var(--emby); }
+  .status-dot.err { background: var(--netflix); }
+  .test-btn {
+    margin-left: auto; font-size: 11px;
+    color: var(--gold); font-weight: 600;
+    padding: 4px 8px; border-radius: 4px;
+    border: 1px solid var(--gold-dim);
+    transition: background 0.15s;
+  }
+  .test-btn:hover { background: rgba(232,184,75,0.1); }
+  .toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface);
+    border: 1px solid var(--rim);
+    border-radius: var(--r-md);
+    padding: 12px 20px;
+    font-size: 13px; color: var(--bright);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 999; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── SCROLLBAR ───────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--rim); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="logo">Stream<span>Vault</span></div>
+    <div class="header-actions">
+      <button class="icon-btn" id="settingsBtn" title="Settings" onclick="openSettings()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- PROTOCOL WARNING BANNER -->
+  <div id="protocolWarning" style="display:none;background:rgba(229,9,20,0.08);border-bottom:1px solid var(--netflix);padding:12px 24px;font-size:13px;color:var(--body);line-height:1.6">
+    <strong style="color:var(--netflix)">⚠️ Opened as a local file.</strong>
+    Browsers block most API requests from <code>file://</code> pages, which is very likely why TMDB and Emby both fail to connect.
+    <strong>Fix:</strong> serve this folder over a tiny local server instead of double-clicking the file.
+    <div style="margin-top:8px;font-family:var(--font-mono);font-size:12px;background:var(--surface);border:1px solid var(--rim);border-radius:6px;padding:8px 10px;display:inline-block">
+      cd into the folder, then run: <strong>python3 -m http.server 8000</strong>
+    </div>
+    <div style="margin-top:6px">Then open <strong>http://localhost:8000/streamvault.html</strong> on this device, or <strong>http://&lt;this-computer's-LAN-IP&gt;:8000/streamvault.html</strong> from your phone/TV on the same network.</div>
+  </div>
+
+  <!-- SEARCH SECTION -->
+  <section class="search-section">
+    <div class="search-wrap">
+      <div class="search-label">What do you want to watch?</div>
+      <div class="search-row">
+        <div class="search-input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" class="search-input" id="searchInput"
+            placeholder="Title, director, keyword…"
+            autocomplete="off" autocorrect="off" spellcheck="false">
+        </div>
+        <button class="search-btn" id="searchBtn" onclick="doSearch()">Search</button>
+      </div>
+
+      <!-- Content type toggle -->
+      <div class="filters">
+        <div class="filter-toggle-group">
+          <button class="filter-toggle active" data-type="all" onclick="setType('all',this)">All</button>
+          <button class="filter-toggle" data-type="movie" onclick="setType('movie',this)">Movies</button>
+          <button class="filter-toggle" data-type="tv" onclick="setType('tv',this)">Series</button>
+        </div>
+        <select class="filter-select" id="genreFilter" onchange="onDiscoverFilterChange()">
+          <option value="">All genres</option>
+          <option value="28">Action</option>
+          <option value="12">Adventure</option>
+          <option value="16">Animation</option>
+          <option value="35">Comedy</option>
+          <option value="80">Crime</option>
+          <option value="99">Documentary</option>
+          <option value="18">Drama</option>
+          <option value="10751">Family</option>
+          <option value="14">Fantasy</option>
+          <option value="36">History</option>
+          <option value="27">Horror</option>
+          <option value="10402">Music</option>
+          <option value="9648">Mystery</option>
+          <option value="10749">Romance</option>
+          <option value="878">Sci-Fi</option>
+          <option value="53">Thriller</option>
+          <option value="10765">Sci-Fi & Fantasy (TV)</option>
+          <option value="10759">Action & Adventure (TV)</option>
+          <option value="10768">War & Politics</option>
+          <option value="37">Western</option>
+        </select>
+        <select class="filter-select" id="yearFilter" onchange="onDiscoverFilterChange()">
+          <option value="">All years</option>
+        </select>
+        <select class="filter-select" id="runtimeFilter" onchange="applyFilters()">
+          <option value="">Any runtime</option>
+          <option value="short">Under 90 min</option>
+          <option value="medium">90–120 min</option>
+          <option value="long">Over 120 min</option>
+        </select>
+        <select class="filter-select" id="ratingFilter" onchange="applyFilters()">
+          <option value="">Any rating</option>
+          <option value="7">7+ rated</option>
+          <option value="8">8+ rated</option>
+          <option value="9">9+ rated</option>
+        </select>
+      </div>
+
+      <!-- Platform filters -->
+      <div class="platform-filters" id="platformFilters">
+        <button class="platform-pill active-netflix" data-platform="netflix" onclick="togglePlatform('netflix',this)">
+          <span class="dot"></span>Netflix
+        </button>
+        <button class="platform-pill active-prime" data-platform="prime" onclick="togglePlatform('prime',this)">
+          <span class="dot"></span>Prime
+        </button>
+        <button class="platform-pill active-apple" data-platform="apple" onclick="togglePlatform('apple',this)">
+          <span class="dot"></span>Apple TV+
+        </button>
+        <button class="platform-pill active-disney" data-platform="disney" onclick="togglePlatform('disney',this)">
+          <span class="dot"></span>Disney+
+        </button>
+        <button class="platform-pill active-now" data-platform="now" onclick="togglePlatform('now',this)">
+          <span class="dot"></span>NOW
+        </button>
+        <button class="platform-pill active-britbox" data-platform="britbox" onclick="togglePlatform('britbox',this)">
+          <span class="dot"></span>BritBox
+        </button>
+        <button class="platform-pill active-paramount" data-platform="paramount" onclick="togglePlatform('paramount',this)">
+          <span class="dot"></span>Paramount+
+        </button>
+        <button class="platform-pill active-itvx" data-platform="itvx" onclick="togglePlatform('itvx',this)">
+          <span class="dot"></span>ITVX
+        </button>
+        <button class="platform-pill active-ch4" data-platform="ch4" onclick="togglePlatform('ch4',this)">
+          <span class="dot"></span>Channel 4
+        </button>
+        <button class="platform-pill active-my5" data-platform="my5" onclick="togglePlatform('my5',this)">
+          <span class="dot"></span>My5
+        </button>
+        <button class="platform-pill active-emby" data-platform="emby" onclick="togglePlatform('emby',this)">
+          <span class="dot"></span>Emby
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN -->
+  <main class="main" id="mainContent">
+    <div class="state-panel" id="homeState">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.9L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+      </svg>
+      <h3>Find your next watch</h3>
+      <p>Search by title, director, or keyword — or leave it blank and hit Search to browse by genre, platform, year, and more.</p>
+    </div>
+    <div class="state-panel" id="loadingState" style="display:none">
+      <div class="spinner"></div>
+      <p style="color:var(--muted)">Searching across platforms…</p>
+    </div>
+    <div class="state-panel" id="emptyState" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/>
+      </svg>
+      <h3>Nothing found</h3>
+      <p>Try a different search or adjust your filters. UK availability data varies by platform.</p>
+    </div>
+
+    <!-- Results -->
+    <div id="resultsArea" style="display:none">
+      <div class="results-header">
+        <div class="results-count" id="resultsCount"></div>
+        <select class="sort-select" id="sortSelect" onchange="sortAndRender()">
+          <option value="relevance">Sort: Relevance</option>
+          <option value="year-desc">Newest first</option>
+          <option value="year-asc">Oldest first</option>
+          <option value="rating-desc">Highest rated</option>
+          <option value="alpha">A–Z</option>
+        </select>
+      </div>
+      <div class="grid" id="resultsGrid"></div>
+      <div id="scrollSentinel" style="height:1px"></div>
+      <div id="loadMoreSpinner" style="display:none;justify-content:center;padding:24px 0">
+        <div class="spinner" style="width:28px;height:28px"></div>
+      </div>
+    </div>
+  </main>
+
+</div><!-- /app -->
+
+<!-- ── DETAIL MODAL ──────────────────────────────────────── -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-backdrop" id="modalBackdrop">
+      <img id="modalBackdropImg" src="" alt="">
+      <div class="modal-backdrop-gradient"></div>
+      <button class="modal-close" onclick="closeModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-type" id="modalType"></div>
+      <h2 class="modal-title" id="modalTitle"></h2>
+      <div class="modal-facts" id="modalFacts"></div>
+      <p class="modal-overview" id="modalOverview"></p>
+      <div class="modal-platforms">
+        <div class="modal-platforms-label">Available on</div>
+        <div class="watch-buttons" id="watchButtons"></div>
+      </div>
+      <div class="modal-genres" id="modalGenres"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SETTINGS PANEL ─────────────────────────────────────── -->
+<div class="settings-panel" id="settingsPanel">
+  <div class="settings-header">
+    <h2>Settings</h2>
+    <button class="icon-btn" onclick="closeSettings()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+  <div class="settings-body">
+
+    <div class="settings-section">
+      <div class="settings-section-title">TMDB</div>
+      <div class="setting-row">
+        <label class="setting-label" for="tmdbKey" style="display:flex;justify-content:space-between;align-items:baseline">
+          Read Access Token
+          <span id="tmdbCharCount" style="font-size:11px;font-weight:400;font-family:var(--font-mono);color:var(--muted)">0 chars</span>
+        </label>
+        <input type="text" class="setting-input" id="tmdbKey" placeholder="eyJhbGciOiJIUzI1NiJ9…" oninput="onTmdbInput(this)" style="font-size:11px;font-family:var(--font-mono)">
+        <div class="setting-hint" id="tmdbHint">themoviedb.org → Settings → API → "API Read Access Token". Should start with <strong>eyJ</strong> and be ~200 chars.</div>
+      </div>
+      <div class="status-row" id="tmdbStatus">
+        <span class="status-dot" id="tmdbDot"></span>
+        <span id="tmdbStatusText">Not configured</span>
+        <button class="test-btn" onclick="testTMDB()">Test</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Emby Server</div>
+      <div id="embyMixedContentWarning" style="display:none;background:rgba(232,184,75,0.08);border:1px solid var(--gold-dim);border-radius:var(--r-sm);padding:10px 12px;font-size:12px;color:var(--gold);line-height:1.6;margin-bottom:12px">
+        ⚠️ <strong>Mixed content blocked.</strong> Your browser is blocking HTTP requests to Emby because this page is open as a <code>file://</code> URL.<br><br>
+        <strong>Fix:</strong> In Chrome/Edge, go to <code>chrome://flags</code> and search for <em>"Insecure origins"</em>, then add <code>http://81.103.22.25:8096</code>. Or open the HTML via a local server (VS Code Live Server, Python's <code>http.server</code>). Firefox may work without this step.
+      </div>
+      <div class="setting-row">
+        <label class="setting-label" for="embyUrl">Server URL</label>
+        <input type="text" class="setting-input" id="embyUrl" placeholder="http://81.103.22.25:8096" oninput="checkEmbyUrl(this)">
+        <div class="setting-hint" id="embyUrlHint">Include http:// and port number</div>
+      </div>
+      <div class="setting-row">
+        <label class="setting-label" for="embyUsername">Username</label>
+        <input type="text" class="setting-input" id="embyUsername" placeholder="Your Emby username" autocomplete="username">
+      </div>
+      <div class="setting-row">
+        <label class="setting-label" for="embyPassword">Password</label>
+        <input type="password" class="setting-input" id="embyPassword" placeholder="Your Emby password" autocomplete="current-password">
+        <div class="setting-hint">Credentials are used once to get a session token, then stored locally</div>
+      </div>
+      <button class="settings-save" style="margin-top:4px;margin-bottom:0;height:38px;font-size:13px" onclick="loginEmby()">Connect to Emby</button>
+      <div class="status-row" id="embyStatus" style="margin-top:8px">
+        <span class="status-dot" id="embyDot"></span>
+        <span id="embyStatusText">Not connected</span>
+        <button class="test-btn" onclick="testEmby()">Test</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Platforms</div>
+      <div class="setting-hint" style="margin-top:-4px">
+        Toggle which platforms appear in results using the pills above the search bar — Netflix, Prime, Apple TV+, Disney+, NOW, BritBox, Paramount+, ITVX, Channel 4, My5, and Emby.
+      </div>
+    </div>
+
+    <button class="settings-save" onclick="saveSettings()">Save settings</button>
+    <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:12px">
+      Settings are stored in your browser only
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════════ */
+const STATE = {
+  query: '',
+  type: 'all',         // all | movie | tv
+  genre: '',
+  year: '',
+  runtime: '',
+  rating: '',
+  platformFilters: {
+    netflix: true, prime: true, apple: true, emby: true,
+    disney: true, now: true, britbox: true, paramount: true,
+    itvx: true, ch4: true, my5: true,
+  },
+  sort: 'relevance',
+  results: [],         // filtered view
+  rawResults: [],      // all fetched results
+  embyItems: [],
+  loading: false,
+  mode: 'search',      // 'search' | 'browse' — browse = empty query, filter-driven discovery
+  page: 1,             // current TMDB page fetched
+  totalPages: 1,       // TMDB's reported total pages for current query/discover
+  fetchingMore: false, // true while a pagination fetch is in-flight
+};
+
+const SETTINGS_KEY = 'streamvault_settings_v2';
+
+let settings = {
+  tmdbKey: '',
+  embyUrl: 'http://81.103.22.25:8096',
+  embyToken: '',    // session token obtained via username/password login
+  embyUserId: '',   // returned by login
+};
+
+/* ── TMDB watch-provider IDs for GB region ────────────────
+   Verified against /watch/providers/movie?watch_region=GB
+   8   = Netflix          9   = Amazon Prime Video
+   2   = Apple TV+        337 = Disney Plus
+   39  = NOW              151 = BritBox
+   531 = Paramount Plus   456 = ITVX
+   103 = Channel 4        134 = Channel 5 (My5)
+*/
+const UK_PROVIDERS = {
+  netflix:   { id: 8,   name: 'Netflix',     cls: 'badge-netflix',   watchCls: 'watch-btn-netflix',   url: (id,t) => `https://www.netflix.com/search?q=${encodeURIComponent(id)}` },
+  prime:     { id: 9,   name: 'Prime',       cls: 'badge-prime',     watchCls: 'watch-btn-prime',     url: (id,t) => `https://www.amazon.co.uk/gp/video/search?phrase=${encodeURIComponent(id)}` },
+  apple:     { id: 2,   name: 'Apple TV+',   cls: 'badge-apple',     watchCls: 'watch-btn-apple',     url: (id,t) => `https://tv.apple.com/gb/search?term=${encodeURIComponent(id)}` },
+  disney:    { id: 337, name: 'Disney+',     cls: 'badge-disney',    watchCls: 'watch-btn-disney',    url: (id,t) => `https://www.disneyplus.com/search?q=${encodeURIComponent(id)}` },
+  now:       { id: 39,  name: 'NOW',         cls: 'badge-now',       watchCls: 'watch-btn-now',       url: (id,t) => `https://www.nowtv.com/gb/search?q=${encodeURIComponent(id)}` },
+  britbox:   { id: 151, name: 'BritBox',     cls: 'badge-britbox',   watchCls: 'watch-btn-britbox',   url: (id,t) => `https://www.britbox.co.uk/search?q=${encodeURIComponent(id)}` },
+  paramount: { id: 531, name: 'Paramount+',  cls: 'badge-paramount', watchCls: 'watch-btn-paramount', url: (id,t) => `https://www.paramountplus.com/uk/search/?query=${encodeURIComponent(id)}` },
+  itvx:      { id: 456, name: 'ITVX',        cls: 'badge-itvx',      watchCls: 'watch-btn-itvx',      url: (id,t) => `https://www.itv.com/watch?q=${encodeURIComponent(id)}` },
+  ch4:       { id: 103, name: 'Channel 4',   cls: 'badge-ch4',       watchCls: 'watch-btn-ch4',       url: (id,t) => `https://www.channel4.com/search?q=${encodeURIComponent(id)}` },
+  my5:       { id: 134, name: 'My5',         cls: 'badge-my5',       watchCls: 'watch-btn-my5',       url: (id,t) => `https://www.channel5.com/search?q=${encodeURIComponent(id)}` },
+  emby:      { id: -1,  name: 'Emby',        cls: 'badge-emby',      watchCls: 'watch-btn-emby',      url: (id,t) => settings.embyUrl ? `${settings.embyUrl}/web/index.html#!/item?id=${id}&serverId=` : '#' },
+};
+
+const GENRE_MAP = {
+  28:'Action',12:'Adventure',16:'Animation',35:'Comedy',80:'Crime',
+  99:'Documentary',18:'Drama',10751:'Family',14:'Fantasy',36:'History',
+  27:'Horror',10402:'Music',9648:'Mystery',10749:'Romance',878:'Science Fiction',
+  53:'Thriller',10765:'Sci-Fi & Fantasy',10759:'Action & Adventure',
+  10768:'War & Politics',37:'Western',10762:'Kids',10763:'News',10764:'Reality',
+  10766:'Soap',10767:'Talk',
+};
+
+/* ═══════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', () => {
+  loadSettings();
+  populateYearFilter();
+  document.getElementById('searchInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doSearch();
+  });
+  if (location.protocol === 'file:') {
+    document.getElementById('protocolWarning').style.display = 'block';
+  }
+});
+
+function populateYearFilter() {
+  const sel = document.getElementById('yearFilter');
+  const current = new Date().getFullYear();
+  for (let y = current; y >= 1970; y--) {
+    const o = document.createElement('option');
+    o.value = y; o.textContent = y;
+    sel.appendChild(o);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SETTINGS
+═══════════════════════════════════════════════════════════ */
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    settings = { ...settings, ...s };
+  } catch(e) {}
+  document.getElementById('tmdbKey').value    = settings.tmdbKey || '';
+  document.getElementById('embyUrl').value    = settings.embyUrl || 'http://81.103.22.25:8096';
+  // Don't repopulate password — just show connection state
+  updateStatusIndicators();
+}
+
+function saveSettings() {
+  settings.tmdbKey = document.getElementById('tmdbKey').value.trim();
+  settings.embyUrl = document.getElementById('embyUrl').value.trim().replace(/\/$/, '');
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  updateStatusIndicators();
+  closeSettings();
+  showToast('Settings saved');
+}
+
+function updateStatusIndicators() {
+  const td = document.getElementById('tmdbDot');
+  const tt = document.getElementById('tmdbStatusText');
+  if (settings.tmdbKey) {
+    td.className = 'status-dot ok'; tt.textContent = 'Token set';
+  } else {
+    td.className = 'status-dot'; tt.textContent = 'No token';
+  }
+  const ed = document.getElementById('embyDot');
+  const et = document.getElementById('embyStatusText');
+  if (settings.embyToken) {
+    ed.className = 'status-dot ok'; et.textContent = `Connected — ${settings.embyUrl}`;
+  } else if (settings.embyUrl) {
+    ed.className = 'status-dot'; et.textContent = 'Server set — log in below';
+  } else {
+    ed.className = 'status-dot'; et.textContent = 'Not connected';
+  }
+}
+
+function onTmdbInput(el) {
+  const val = el.value.trim();
+  const count = val.length;
+  const counter = document.getElementById('tmdbCharCount');
+  const hint = document.getElementById('tmdbHint');
+  counter.textContent = `${count} chars`;
+  if (count === 0) {
+    counter.style.color = 'var(--muted)';
+    hint.style.color = '';
+  } else if (!val.startsWith('eyJ')) {
+    counter.style.color = 'var(--netflix)';
+    hint.innerHTML = '⚠️ This doesn\'t look right — the Read Access Token must start with <strong>eyJ</strong>. Make sure you\'re not using the short API Key.';
+    hint.style.color = 'var(--netflix)';
+  } else if (count < 100) {
+    counter.style.color = 'var(--netflix)';
+    hint.innerHTML = `⚠️ Token looks too short (${count} chars). It should be ~200 chars — check it wasn't truncated when copying.`;
+    hint.style.color = 'var(--netflix)';
+  } else {
+    counter.style.color = 'var(--emby)';
+    hint.innerHTML = '✓ Token format looks correct. Hit <strong>Test</strong> to verify.';
+    hint.style.color = 'var(--emby)';
+  }
+}
+
+function checkEmbyUrl(el) {
+  const val = el.value.trim();
+  const hint = document.getElementById('embyUrlHint');
+  const warn = document.getElementById('embyMixedContentWarning');
+  if (val.startsWith('http://') && location.protocol === 'file:') {
+    warn.style.display = 'block';
+  } else {
+    warn.style.display = 'none';
+  }
+  if (val && !val.startsWith('http')) {
+    hint.innerHTML = '⚠️ Must start with <strong>http://</strong> or <strong>https://</strong>';
+    hint.style.color = 'var(--netflix)';
+  } else {
+    hint.textContent = 'Include http:// and port number';
+    hint.style.color = '';
+  }
+}
+
+async function testTMDB() {
+  const token = document.getElementById('tmdbKey').value.trim();
+  if (!token) { showToast('Enter your Read Access Token first'); return; }
+  if (!token.startsWith('eyJ')) {
+    showToast('Token must start with eyJ — check you\'re not using the short API key');
+    return;
+  }
+  try {
+    const r = await fetch('https://api.themoviedb.org/3/authentication', {
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+    });
+    if (r.ok) {
+      document.getElementById('tmdbDot').className = 'status-dot ok';
+      document.getElementById('tmdbStatusText').textContent = `Connected ✓ (${token.length} char token)`;
+      showToast('TMDB connection successful ✓');
+    } else {
+      let detail = `HTTP ${r.status}`;
+      try {
+        const body = await r.json();
+        if (body.status_message) detail += `: ${body.status_message}`;
+      } catch(_) {}
+      document.getElementById('tmdbDot').className = 'status-dot err';
+      document.getElementById('tmdbStatusText').textContent = detail;
+      if (r.status === 401) {
+        showToast('TMDB says token is invalid — copy it fresh from themoviedb.org, no extra spaces');
+      } else {
+        showToast(`TMDB error — ${detail}`);
+      }
+    }
+  } catch(e) {
+    document.getElementById('tmdbDot').className = 'status-dot err';
+    if (location.protocol === 'file:') {
+      document.getElementById('tmdbStatusText').textContent = 'Blocked by browser (file:// + CORS)';
+      showToast('Your browser blocked this request from a file:// page — try the local server fix in the Emby section, or open this file via a real URL');
+    } else {
+      document.getElementById('tmdbStatusText').textContent = 'Network error';
+      showToast('Could not reach TMDB — check your internet connection');
+    }
+    console.error('TMDB test fetch error:', e);
+  }
+}
+
+async function loginEmby() {
+  const url      = document.getElementById('embyUrl').value.trim().replace(/\/$/, '');
+  const username = document.getElementById('embyUsername').value.trim();
+  const password = document.getElementById('embyPassword').value;
+  if (!url || !username) { showToast('Enter server URL and username'); return; }
+
+  const ed = document.getElementById('embyDot');
+  const et = document.getElementById('embyStatusText');
+  et.textContent = 'Connecting…';
+
+  // Emby requires a specific Authorization header for unauthenticated login
+  const authHeader = `MediaBrowser Client="StreamVault", Device="Browser", DeviceId="streamvault-web", Version="1.0.0"`;
+
+  try {
+    const r = await fetch(`${url}/Users/AuthenticateByName`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Emby-Authorization': authHeader,
+      },
+      body: JSON.stringify({ Username: username, Pw: password }),
+    });
+
+    if (r.ok) {
+      const d = await r.json();
+      settings.embyUrl    = url;
+      settings.embyToken  = d.AccessToken;
+      settings.embyUserId = d.User?.Id || '';
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      ed.className = 'status-dot ok';
+      et.textContent = `Connected as ${d.User?.Name || username}`;
+      document.getElementById('embyPassword').value = ''; // clear password from UI
+      showToast(`Emby connected as ${d.User?.Name || username} ✓`);
+    } else if (r.status === 401) {
+      ed.className = 'status-dot err';
+      et.textContent = 'Wrong username or password';
+      showToast('Login failed — check your credentials');
+    } else {
+      ed.className = 'status-dot err';
+      et.textContent = `Server error ${r.status}`;
+      showToast(`Emby returned ${r.status}`);
+    }
+  } catch(e) {
+    ed.className = 'status-dot err';
+    if (location.protocol === 'file:' && url.startsWith('http://')) {
+      et.textContent = 'Blocked by browser (file:// page)';
+      document.getElementById('embyMixedContentWarning').style.display = 'block';
+      showToast('Your browser is blocking this — see the warning above for the fix');
+    } else if (location.protocol === 'https:' && url.startsWith('http://')) {
+      et.textContent = 'Blocked: HTTPS page cannot call HTTP server';
+      showToast('This page is HTTPS but Emby is HTTP — browsers block this. See hint below.');
+    } else {
+      et.textContent = 'Cannot reach server (network error)';
+      showToast('Fetch failed — check the URL, port, and that you\'re on the same network as Emby');
+    }
+    console.error('Emby login fetch error:', e);
+  }
+}
+
+async function testEmby() {
+  if (!settings.embyToken || !settings.embyUrl) {
+    showToast('Log in to Emby first');
+    return;
+  }
+  try {
+    const r = await fetch(`${settings.embyUrl}/System/Info`, {
+      headers: { 'X-Emby-Token': settings.embyToken }
+    });
+    if (r.ok) {
+      const d = await r.json();
+      document.getElementById('embyDot').className = 'status-dot ok';
+      document.getElementById('embyStatusText').textContent = `Connected: ${d.ServerName || 'Emby'} ✓`;
+      showToast('Emby session still active ✓');
+    } else {
+      document.getElementById('embyDot').className = 'status-dot err';
+      document.getElementById('embyStatusText').textContent = 'Session expired — log in again';
+      showToast('Emby session expired — log in again');
+      settings.embyToken = '';
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    }
+  } catch(e) {
+    document.getElementById('embyDot').className = 'status-dot err';
+    document.getElementById('embyStatusText').textContent = 'Cannot reach server';
+    showToast('Cannot reach Emby server');
+  }
+}
+
+function openSettings() {
+  document.getElementById('settingsPanel').classList.add('open');
+  document.getElementById('settingsBtn').classList.add('active');
+}
+function closeSettings() {
+  document.getElementById('settingsPanel').classList.remove('open');
+  document.getElementById('settingsBtn').classList.remove('active');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FILTER / TYPE CONTROLS
+
+   Genre, year, and type feed TMDB's /discover params directly in
+   browse mode (empty search box), so changing them there requires a
+   fresh fetch from page 1 — the already-loaded rawResults won't
+   contain items TMDB never returned. In search mode these are pure
+   client-side filters over the existing /search results.
+
+   Platform pills: in search mode, /search already enriched every
+   item with all its UK providers, so toggling is a client-side
+   display filter. In browse mode, with_watch_providers is sent to
+   /discover, so toggling changes what TMDB returns — needs a refetch.
+
+   Runtime and rating are always client-side only (TMDB has no
+   matching discover params we rely on here).
+═══════════════════════════════════════════════════════════ */
+function setType(type, btn) {
+  STATE.type = type;
+  document.querySelectorAll('.filter-toggle').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (!STATE.rawResults.length) return;
+  if (STATE.mode === 'browse') doSearch();
+  else applyFilters();
+}
+
+function togglePlatform(platform, btn) {
+  STATE.platformFilters[platform] = !STATE.platformFilters[platform];
+  const activeClass = `active-${platform}`;
+  if (STATE.platformFilters[platform]) btn.classList.add(activeClass);
+  else btn.classList.remove(activeClass);
+  if (!STATE.rawResults.length) return;
+  if (STATE.mode === 'browse') doSearch();
+  else applyFilters();
+}
+
+/* Genre/year selects: refetch in browse mode, client-filter in search mode */
+function onDiscoverFilterChange() {
+  if (STATE.rawResults.length && STATE.mode === 'browse') doSearch();
+  else applyFilters();
+}
+
+function applyFilters(append = false) {
+  STATE.genre   = document.getElementById('genreFilter').value;
+  STATE.year    = document.getElementById('yearFilter').value;
+  STATE.runtime = document.getElementById('runtimeFilter').value;
+  STATE.rating  = document.getElementById('ratingFilter').value;
+
+  let filtered = STATE.rawResults.filter(item => {
+    // Type
+    if (STATE.type === 'movie' && item.media_type !== 'movie') return false;
+    if (STATE.type === 'tv'    && item.media_type !== 'tv')    return false;
+
+    // Platform
+    const hasAny = Object.entries(STATE.platformFilters).some(([k,v]) => v && item.platforms.includes(k));
+    if (!hasAny) return false;
+
+    // Genre
+    if (STATE.genre && !item.genre_ids.includes(parseInt(STATE.genre))) return false;
+
+    // Year
+    const itemYear = parseInt(item.year);
+    if (STATE.year && itemYear !== parseInt(STATE.year)) return false;
+
+    // Rating
+    if (STATE.rating && item.vote_average < parseFloat(STATE.rating)) return false;
+
+    // Runtime (movies only)
+    if (STATE.runtime && item.media_type === 'movie') {
+      const rt = item.runtime || 0;
+      if (STATE.runtime === 'short'  && !(rt > 0 && rt < 90))  return false;
+      if (STATE.runtime === 'medium' && !(rt >= 90 && rt <= 120)) return false;
+      if (STATE.runtime === 'long'   && !(rt > 120))            return false;
+    }
+
+    return true;
+  });
+
+  STATE.results = filtered;
+  sortAndRender(append);
+}
+
+function sortAndRender(append = false) {
+  let sortVal = document.getElementById('sortSelect').value;
+
+  // TMDB /discover has no "relevance" concept — it's already newest-first
+  // server-side, so in browse mode treat "Relevance" as "keep server order".
+  if (STATE.mode === 'browse' && sortVal === 'relevance') {
+    renderResults(STATE.results, append);
+    return;
+  }
+
+  STATE.sort = sortVal;
+  const arr = [...STATE.results];
+  switch(STATE.sort) {
+    case 'year-desc':    arr.sort((a,b) => (parseInt(b.year)||0) - (parseInt(a.year)||0)); break;
+    case 'year-asc':     arr.sort((a,b) => (parseInt(a.year)||0) - (parseInt(b.year)||0)); break;
+    case 'rating-desc':  arr.sort((a,b) => (b.vote_average||0) - (a.vote_average||0)); break;
+    case 'alpha':        arr.sort((a,b) => a.title.localeCompare(b.title)); break;
+  }
+  renderResults(arr, append);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SEARCH
+═══════════════════════════════════════════════════════════ */
+async function doSearch() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (!settings.tmdbKey) {
+    openSettings();
+    showToast('Add your TMDB Read Access Token first');
+    return;
+  }
+
+  STATE.query = q;
+  STATE.mode = q ? 'search' : 'browse';
+  STATE.page = 1;
+  STATE.totalPages = 1;
+  STATE.fetchingMore = false;
+  setLoading(true);
+
+  try {
+    let tmdbResults, totalPages;
+    if (STATE.mode === 'search') {
+      ({ results: tmdbResults, totalPages } = await searchTMDB(q, 1));
+    } else {
+      ({ results: tmdbResults, totalPages } = await browseTMDB(1));
+    }
+    STATE.totalPages = totalPages;
+
+    const embyResults = await searchEmby(q || '');
+    STATE._embyCache = embyResults;
+
+    const merged = await mergeWithEmby(tmdbResults, embyResults, STATE.mode);
+
+    STATE.rawResults = merged.filter(i => i.platforms.length > 0);
+    applyFilters();
+    setupInfiniteScroll();
+  } catch(err) {
+    console.error(err);
+    showToast('Search failed — check your settings');
+    setLoading(false);
+    showState('home');
+  }
+}
+
+/* Fetch the next page of results when scrolling, in search or browse mode */
+async function loadMore() {
+  if (STATE.fetchingMore) return;
+  if (STATE.page >= STATE.totalPages) return;
+  if (!settings.tmdbKey) return;
+
+  STATE.fetchingMore = true;
+  showLoadMoreSpinner(true);
+
+  try {
+    const nextPage = STATE.page + 1;
+    let tmdbResults;
+    if (STATE.mode === 'search') {
+      ({ results: tmdbResults } = await searchTMDB(STATE.query, nextPage));
+    } else {
+      ({ results: tmdbResults } = await browseTMDB(nextPage));
+    }
+
+    const enriched = await enrichWithProviders(tmdbResults);
+    const tagged = await tagWithEmby(enriched);
+
+    STATE.rawResults.push(...tagged.filter(i => i.platforms.length > 0));
+    STATE.page = nextPage;
+    applyFilters(true); // true = append mode, preserve scroll position
+  } catch(err) {
+    console.error('loadMore failed', err);
+  } finally {
+    STATE.fetchingMore = false;
+    showLoadMoreSpinner(false);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TMDB
+═══════════════════════════════════════════════════════════ */
+async function searchTMDB(query, page = 1) {
+  const token = settings.tmdbKey;
+  const types = STATE.type === 'all' ? ['movie','tv'] : [STATE.type];
+  const headers = { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' };
+  let totalPages = 1;
+  const allResults = [];
+
+  for (const type of types) {
+    const url = `https://api.themoviedb.org/3/search/${type}?query=${encodeURIComponent(query)}&language=en-GB&region=GB&page=${page}&include_adult=false`;
+    const r = await fetch(url, { headers });
+    if (!r.ok) throw new Error('TMDB search failed');
+    const d = await r.json();
+    totalPages = Math.max(totalPages, d.total_pages || 1);
+    (d.results || []).forEach(item => {
+      allResults.push(mapTmdbItem(item, type));
+    });
+  }
+
+  const enriched = await enrichWithProviders(allResults);
+  return { results: enriched, totalPages: Math.min(totalPages, 500) };
+}
+
+/* Browse mode: TMDB /discover, filtered by genre/year/platform, sorted newest-first.
+   Used when the search box is empty and the user hits Search. */
+async function browseTMDB(page = 1) {
+  const token = settings.tmdbKey;
+  const types = STATE.type === 'all' ? ['movie','tv'] : [STATE.type];
+  const headers = { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' };
+
+  const activeProviderIds = Object.entries(STATE.platformFilters)
+    .filter(([k,v]) => v && k !== 'emby')
+    .map(([k]) => UK_PROVIDERS[k]?.id)
+    .filter(id => id && id > 0);
+
+  let totalPages = 1;
+  const allResults = [];
+
+  for (const type of types) {
+    const params = new URLSearchParams({
+      language: 'en-GB',
+      region: 'GB',
+      watch_region: 'GB',
+      page: String(page),
+      include_adult: 'false',
+      sort_by: type === 'movie' ? 'primary_release_date.desc' : 'first_air_date.desc',
+    });
+    // Only show things with a release date in the past (avoid far-future placeholders)
+    const today = new Date().toISOString().slice(0,10);
+    if (type === 'movie') params.set('primary_release_date.lte', today);
+    else params.set('first_air_date.lte', today);
+
+    // TMDB genre IDs aren't fully shared between movie and TV — e.g. 10765
+    // "Sci-Fi & Fantasy" is TV-only, 878 "Science Fiction" is movie-only.
+    // When type is 'all', sending a mismatched ID to one endpoint would
+    // return zero results for that endpoint, so only apply with_genres
+    // to the discover call it's actually valid for.
+    const TV_ONLY_GENRES = new Set([10759,10762,10763,10764,10765,10766,10767,10768]);
+    if (STATE.genre) {
+      const genreId = parseInt(STATE.genre);
+      const isTvOnly = TV_ONLY_GENRES.has(genreId);
+      if ((type === 'tv' && !isTvOnly) || (type === 'movie' && isTvOnly)) {
+        // mismatched: skip with_genres for this endpoint, don't filter it out
+      } else {
+        params.set('with_genres', STATE.genre);
+      }
+    }
+    if (STATE.year) {
+      if (type === 'movie') params.set('primary_release_year', STATE.year);
+      else params.set('first_air_date_year', STATE.year);
+    }
+    if (activeProviderIds.length) {
+      params.set('with_watch_providers', activeProviderIds.join('|'));
+    }
+
+    const url = `https://api.themoviedb.org/3/discover/${type}?${params}`;
+    const r = await fetch(url, { headers });
+    if (!r.ok) throw new Error('TMDB discover failed');
+    const d = await r.json();
+    totalPages = Math.max(totalPages, d.total_pages || 1);
+    (d.results || []).forEach(item => {
+      allResults.push(mapTmdbItem(item, type));
+    });
+  }
+
+  const enriched = await enrichWithProviders(allResults);
+  return { results: enriched, totalPages: Math.min(totalPages, 500) };
+}
+
+function mapTmdbItem(item, type) {
+  return {
+    id: item.id,
+    title: item.title || item.name || '',
+    year: (item.release_date || item.first_air_date || '').slice(0, 4),
+    media_type: type,
+    genre_ids: item.genre_ids || [],
+    vote_average: item.vote_average || 0,
+    overview: item.overview || '',
+    poster_path: item.poster_path,
+    backdrop_path: item.backdrop_path,
+    platforms: [],
+    runtime: null,
+    director: '',
+  };
+}
+
+async function enrichWithProviders(items) {
+  const token = settings.tmdbKey;
+  const headers = { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' };
+  const ACTIVE_IDS = new Set(
+    Object.entries(STATE.platformFilters)
+      .filter(([k,v]) => v && k !== 'emby')
+      .map(([k]) => UK_PROVIDERS[k]?.id)
+      .filter(Boolean)
+  );
+
+  const enriched = await Promise.all(items.map(async item => {
+    try {
+      const url = `https://api.themoviedb.org/3/${item.media_type}/${item.id}/watch/providers`;
+      const r = await fetch(url, { headers });
+      if (!r.ok) return item;
+      const d = await r.json();
+      const gb = (d.results || {}).GB || {};
+      const allProviders = [
+        ...(gb.flatrate || []),
+        ...(gb.free || []),
+        ...(gb.ads || []),
+      ];
+      const providerIds = new Set(allProviders.map(p => p.provider_id));
+
+      Object.entries(UK_PROVIDERS).forEach(([key, prov]) => {
+        if (prov.id !== -1 && providerIds.has(prov.id) && ACTIVE_IDS.has(prov.id)) {
+          item.platforms.push(key);
+        }
+      });
+    } catch(e) {}
+    return item;
+  }));
+
+  return enriched;
+}
+
+async function fetchItemDetails(item) {
+  const token = settings.tmdbKey;
+  if (item.isEmbyOnly || !token) return item;
+  try {
+    const r = await fetch(
+      `https://api.themoviedb.org/3/${item.media_type}/${item.id}?language=en-GB&append_to_response=credits`,
+      { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } }
+    );
+    if (!r.ok) return item;
+    const d = await r.json();
+    item.runtime = d.runtime || (d.episode_run_time && d.episode_run_time[0]) || null;
+    item.genre_ids = (d.genres || []).map(g => g.id);
+    if (d.credits) {
+      const director = (d.credits.crew || []).find(c => c.job === 'Director');
+      item.director = director ? director.name : '';
+    }
+    if (d.seasons) item.seasons = d.seasons.length;
+  } catch(e) {}
+  return item;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   EMBY
+═══════════════════════════════════════════════════════════ */
+async function searchEmby(query) {
+  if (!settings.embyUrl || !settings.embyToken) return [];
+  const { embyUrl, embyToken, embyUserId } = settings;
+  try {
+    const params = new URLSearchParams({
+      IncludeItemTypes: 'Movie,Series',
+      Recursive: 'true',
+      Fields: 'Overview,Genres,RunTimeTicks,CommunityRating,People,ProductionYear,PrimaryImageAspectRatio',
+      Limit: '40',
+    });
+    // Browse mode (empty query): list the library sorted by date added, newest first.
+    // Search mode: filter by search term.
+    if (query) {
+      params.set('SearchTerm', query);
+    } else {
+      params.set('SortBy', 'DateCreated');
+      params.set('SortOrder', 'Descending');
+    }
+    if (embyUserId) params.set('UserId', embyUserId);
+
+    const r = await fetch(`${embyUrl}/Items?${params}`, {
+      headers: { 'X-Emby-Token': embyToken }
+    });
+    if (!r.ok) return [];
+    const d = await r.json();
+    return (d.Items || []).map(item => {
+      let poster = null;
+      if (item.ImageTags && item.ImageTags.Primary) {
+        poster = `${embyUrl}/Items/${item.Id}/Images/Primary?maxWidth=300`;
+      }
+      const director = (item.People || []).find(p => p.Type === 'Director');
+      return {
+        embyId: item.Id,
+        title: item.Name || '',
+        year: item.ProductionYear ? String(item.ProductionYear) : '',
+        type: item.Type === 'Series' ? 'tv' : 'movie',
+        overview: item.Overview || '',
+        runtime: item.RunTimeTicks ? Math.round(item.RunTimeTicks / 600000000) : null,
+        communityRating: item.CommunityRating || 0,
+        poster,
+        director: director ? director.Name : '',
+      };
+    });
+  } catch(e) {
+    console.warn('Emby search failed:', e);
+    return [];
+  }
+}
+
+/* ── Emby merge helpers ───────────────────────────────────
+   Used by both initial doSearch (full merge incl. Emby-only items)
+   and loadMore/pagination (tag-only, since Emby-only items were
+   already included on page 1 and shouldn't be duplicated).
+*/
+function embyKey(title, year) {
+  return (title + (year || '')).toLowerCase().trim();
+}
+
+/* Full merge: tags TMDB items with 'emby' where matched, and appends
+   any Emby items that have no TMDB/provider match at all. */
+async function mergeWithEmby(tmdbResults, embyResults, mode) {
+  const embyMap = {};
+  embyResults.forEach(e => { embyMap[embyKey(e.title, e.year)] = e; });
+
+  tmdbResults.forEach(item => {
+    const match = embyMap[embyKey(item.title, item.year)];
+    if (match) {
+      item.platforms.push('emby');
+      item.embyId = match.embyId;
+    }
+  });
+
+  const tmdbKeys = new Set(tmdbResults.map(i => embyKey(i.title, i.year)));
+  embyResults.forEach(e => {
+    if (!tmdbKeys.has(embyKey(e.title, e.year))) {
+      tmdbResults.push({
+        id: e.embyId,
+        title: e.title,
+        year: e.year,
+        media_type: e.type,
+        genre_ids: [],
+        vote_average: e.communityRating || 0,
+        overview: e.overview || '',
+        poster_path: e.poster,
+        backdrop_path: null,
+        platforms: ['emby'],
+        embyId: e.embyId,
+        runtime: e.runtime,
+        director: e.director || '',
+        isEmbyOnly: true,
+      });
+    }
+  });
+
+  return tmdbResults;
+}
+
+/* Tag-only merge for pagination: matches against the Emby library already
+   fetched on page 1 (cached on STATE), without adding new Emby-only items
+   (those were already included in the initial page). */
+async function tagWithEmby(tmdbResults) {
+  if (!STATE._embyCache) return tmdbResults;
+  const embyMap = {};
+  STATE._embyCache.forEach(e => { embyMap[embyKey(e.title, e.year)] = e; });
+  tmdbResults.forEach(item => {
+    const match = embyMap[embyKey(item.title, item.year)];
+    if (match) {
+      item.platforms.push('emby');
+      item.embyId = match.embyId;
+    }
+  });
+  return tmdbResults;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RENDER
+═══════════════════════════════════════════════════════════ */
+function setLoading(loading) {
+  STATE.loading = loading;
+  document.getElementById('homeState').style.display    = 'none';
+  document.getElementById('loadingState').style.display = loading ? 'flex' : 'none';
+  document.getElementById('emptyState').style.display   = 'none';
+  document.getElementById('resultsArea').style.display  = 'none';
+}
+
+function showState(which) {
+  document.getElementById('homeState').style.display    = which === 'home'  ? 'flex' : 'none';
+  document.getElementById('loadingState').style.display = which === 'loading'? 'flex' : 'none';
+  document.getElementById('emptyState').style.display   = which === 'empty' ? 'flex' : 'none';
+  document.getElementById('resultsArea').style.display  = which === 'results'? 'block': 'none';
+}
+
+function renderResults(items, append = false) {
+  setLoading(false);
+
+  const cumulativeEmpty = STATE.results.length === 0;
+
+  if (cumulativeEmpty) {
+    // Nothing matches the active filters across all pages fetched so far —
+    // but TMDB may have more pages where something does. Auto-advance
+    // rather than declaring "empty" prematurely. Capped to avoid hammering
+    // the API forever on an impossible filter combo (e.g. a platform +
+    // genre + year combination with zero UK titles).
+    const MAX_AUTO_SKIP_PAGES = 5;
+    STATE._emptyPageStreak = (STATE._emptyPageStreak || 0) + 1;
+    if (STATE.page < STATE.totalPages && STATE._emptyPageStreak <= MAX_AUTO_SKIP_PAGES) {
+      loadMore();
+      return;
+    }
+    STATE._emptyPageStreak = 0;
+    showState('empty');
+    return;
+  }
+
+  if (!items.length && append) {
+    // This page added nothing new, but earlier pages already produced
+    // results — just leave the existing grid as-is.
+    return;
+  }
+
+  STATE._emptyPageStreak = 0;
+  showState('results');
+
+  // Filter by active platforms (redundant with applyFilters' hasAny check,
+  // but kept as a defensive second pass since badges below also use this list)
+  const activeFilter = Object.entries(STATE.platformFilters)
+    .filter(([,v]) => v).map(([k]) => k);
+
+  const filtered = items.filter(item =>
+    item.platforms.some(p => activeFilter.includes(p))
+  );
+
+  // Results count label differs for search vs browse mode
+  const totalShown = STATE.results.length;
+  if (STATE.mode === 'browse') {
+    document.getElementById('resultsCount').innerHTML =
+      `<strong>${totalShown}</strong> title${totalShown!==1?'s':''} matching your filters`;
+  } else {
+    document.getElementById('resultsCount').innerHTML =
+      `<strong>${totalShown}</strong> result${totalShown!==1?'s':''} for "${STATE.query}"`;
+  }
+
+  const grid = document.getElementById('resultsGrid');
+  if (!append) grid.innerHTML = '';
+
+  filtered.forEach(item => grid.appendChild(buildCard(item)));
+
+  // (Re)place the infinite-scroll sentinel at the end of the grid
+  positionSentinel();
+}
+
+function buildCard(item) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.onclick = () => openModal(item);
+
+  const posterUrl = item.poster_path
+    ? `https://image.tmdb.org/t/p/w342${item.poster_path}`
+    : (item.isEmbyOnly && item.embyId && settings.embyToken
+        ? `${settings.embyUrl}/Items/${item.embyId}/Images/Primary?maxWidth=300&api_key=${settings.embyToken}`
+        : null);
+
+  const activePlatforms = item.platforms.filter(p => STATE.platformFilters[p]);
+
+  card.innerHTML = `
+    <div class="card-poster">
+      ${posterUrl
+        ? `<img src="${posterUrl}" alt="${escHtml(item.title)}" loading="lazy" onerror="this.parentNode.innerHTML='<div class=poster-fallback><svg viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'1.5\\'><rect x=\\'2\\' y=\\'2\\' width=\\'20\\' height=\\'20\\' rx=\\'2\\'></rect><path d=\\'M7 2v20M2 12h20\\'></path></svg><span>${escHtml(item.title)}</span></div>'">`
+        : `<div class="poster-fallback"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="2"></rect><path d="M7 2v20M2 12h20"></path></svg><span>${escHtml(item.title)}</span></div>`
+      }
+      <div class="card-badges">
+        ${activePlatforms.map(p => `<span class="badge badge-${p}">${UK_PROVIDERS[p]?.name||p}</span>`).join('')}
+      </div>
+      <div class="type-badge">${item.media_type === 'tv' ? 'Series' : 'Film'}</div>
+    </div>
+    <div class="card-info">
+      <div class="card-title">${escHtml(item.title)}</div>
+      <div class="card-meta">
+        <span>${item.year || '—'}</span>
+        ${item.runtime ? `<span>${item.runtime} min</span>` : ''}
+      </div>
+      ${item.vote_average > 0 ? `
+      <div class="card-rating">
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        ${item.vote_average.toFixed(1)}
+      </div>` : ''}
+    </div>`;
+
+  return card;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   INFINITE SCROLL
+═══════════════════════════════════════════════════════════ */
+let scrollObserver = null;
+
+/* Sets up (or re-arms) an IntersectionObserver watching the sentinel
+   element at the bottom of the results grid. Called once per fresh
+   search/browse (doSearch), not on every render — the observer keeps
+   watching the same sentinel across pagination. */
+function setupInfiniteScroll() {
+  const sentinel = document.getElementById('scrollSentinel');
+  if (!sentinel) return;
+
+  if (scrollObserver) scrollObserver.disconnect();
+
+  scrollObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting && !STATE.fetchingMore && STATE.page < STATE.totalPages) {
+        loadMore();
+      }
+    });
+  }, { rootMargin: '600px' }); // trigger ~600px before the sentinel is visible
+
+  scrollObserver.observe(sentinel);
+}
+
+/* No-op placeholder: the sentinel is a fixed element at the end of
+   #resultsArea (after the grid), so it doesn't need repositioning
+   when cards are appended — it stays after the grid in the DOM. */
+function positionSentinel() {}
+
+function showLoadMoreSpinner(show) {
+  const el = document.getElementById('loadMoreSpinner');
+  if (el) el.style.display = show ? 'flex' : 'none';
+}
+async function openModal(item) {
+  // Fetch full details if needed
+  if (!item.director && !item.isEmbyOnly) {
+    item = await fetchItemDetails(item);
+  }
+
+  const overlay  = document.getElementById('modalOverlay');
+  const imgEl    = document.getElementById('modalBackdropImg');
+  const typeEl   = document.getElementById('modalType');
+  const titleEl  = document.getElementById('modalTitle');
+  const factsEl  = document.getElementById('modalFacts');
+  const overviewEl = document.getElementById('modalOverview');
+  const watchEl  = document.getElementById('watchButtons');
+  const genresEl = document.getElementById('modalGenres');
+
+  // Backdrop
+  if (item.backdrop_path) {
+    imgEl.src = `https://image.tmdb.org/t/p/w780${item.backdrop_path}`;
+    imgEl.style.display = 'block';
+  } else if (item.poster_path) {
+    imgEl.src = `https://image.tmdb.org/t/p/w342${item.poster_path}`;
+    imgEl.style.display = 'block';
+  } else {
+    imgEl.style.display = 'none';
+  }
+
+  typeEl.textContent = item.media_type === 'tv' ? 'TV Series' : 'Film';
+  titleEl.textContent = item.title;
+  overviewEl.textContent = item.overview || 'No description available.';
+
+  // Facts
+  const facts = [];
+  if (item.year)         facts.push({ label: 'Year',     val: item.year });
+  if (item.runtime)      facts.push({ label: 'Runtime',  val: `${item.runtime} min` });
+  if (item.director)     facts.push({ label: 'Director', val: item.director });
+  if (item.seasons)      facts.push({ label: 'Seasons',  val: item.seasons });
+  if (item.vote_average > 0) facts.push({ label: 'Rating', val: `★ ${item.vote_average.toFixed(1)}` });
+  factsEl.innerHTML = facts.map(f =>
+    `<div class="modal-fact"><strong>${escHtml(f.val)}</strong>${escHtml(f.label)}</div>`
+  ).join('');
+
+  // Watch buttons
+  const activePlatforms = item.platforms.filter(p => STATE.platformFilters[p]);
+  watchEl.innerHTML = activePlatforms.map(p => {
+    const prov = UK_PROVIDERS[p];
+    const href = p === 'emby'
+      ? prov.url(item.embyId, item.media_type)
+      : prov.url(item.title, item.media_type);
+    return `<a href="${href}" target="_blank" rel="noopener" class="watch-btn watch-btn-${p}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polygon points="5 3 19 12 5 21 5 3"/>
+      </svg>
+      Watch on ${prov.name}
+    </a>`;
+  }).join('');
+
+  // Genres
+  const genreNames = (item.genre_ids || [])
+    .map(id => GENRE_MAP[id]).filter(Boolean).slice(0, 5);
+  genresEl.innerHTML = genreNames.map(g =>
+    `<span class="genre-tag">${escHtml(g)}</span>`
+  ).join('');
+
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modalOverlay') && e.type !== 'click') return;
+  if (e && e.currentTarget === document.getElementById('modalOverlay') && e.target !== e.currentTarget) return;
+  document.getElementById('modalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeModal();
+    closeSettings();
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════
+   UTILS
+═══════════════════════════════════════════════════════════ */
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let toastTimeout;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => t.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
