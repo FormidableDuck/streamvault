@@ -739,6 +739,18 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 10px; color: var(--muted); text-align: center; padding: 4px;
   }
+  .discovery-badges {
+    position: absolute; bottom: 4px; left: 4px; right: 4px;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .discovery-badge {
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 0.4px;
+    padding: 2px 5px; border-radius: 3px;
+    backdrop-filter: blur(4px);
+    display: inline-block;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   .discovery-info { padding: 6px 7px 8px; }
   .discovery-title {
     font-size: 11px; font-weight: 600; color: var(--bright);
@@ -1770,7 +1782,13 @@ async function doSearch() {
     setupInfiniteScroll();
 
     // Render person results above the grid (after applyFilters shows the grid)
-    if (people.length) renderPersonResults(people);
+    if (people.length) {
+      renderPersonResults(people);
+      // Auto-expand the top person's credits immediately — clicking the person
+      // card manually is a second step the user shouldn't need for the primary result
+      const topPersonHeader = document.querySelector('.person-result .person-header');
+      if (topPersonHeader) expandPersonCredits(people[0].id, topPersonHeader);
+    }
 
   } catch(err) {
     console.error(err);
@@ -2996,8 +3014,14 @@ async function loadTrending() {
     const r = await fetch('https://api.themoviedb.org/3/trending/all/week?language=en-GB&region=GB', { headers });
     if (!r.ok) throw new Error();
     const d = await r.json();
-    const items = (d.results || []).filter(i => i.media_type === 'movie' || i.media_type === 'tv').slice(0, 20);
-    renderDiscoveryRow('trendingScroll', 'trendingLoading', items);
+    const items = (d.results || [])
+      .filter(i => i.media_type === 'movie' || i.media_type === 'tv')
+      .slice(0, 20);
+
+    // Enrich with GB watch providers so we can show platform badges
+    // and distinguish "In cinemas" from "Streaming"
+    const enriched = await enrichDiscoveryItems(items, headers);
+    renderDiscoveryRow('trendingScroll', 'trendingLoading', enriched);
   } catch(e) {
     document.getElementById('trendingLoading').textContent = 'Could not load trending titles.';
   }
@@ -3018,17 +3042,65 @@ async function loadNewReleases() {
       sort_by: 'primary_release_date.desc',
       'primary_release_date.gte': monthAgo,
       'primary_release_date.lte': today,
-      'vote_count.gte': '10',
+      'vote_count.gte': '5',
     });
     if (activeProviderIds.length) params.set('with_watch_providers', activeProviderIds.join('|'));
 
     const r = await fetch(`https://api.themoviedb.org/3/discover/movie?${params}`, { headers });
     if (!r.ok) throw new Error();
     const d = await r.json();
-    renderDiscoveryRow('newReleasesScroll', 'newReleasesLoading', d.results || []);
+    const items = (d.results || []).slice(0, 20).map(i => ({ ...i, media_type: 'movie' }));
+    const enriched = await enrichDiscoveryItems(items, headers);
+    renderDiscoveryRow('newReleasesScroll', 'newReleasesLoading', enriched);
   } catch(e) {
     document.getElementById('newReleasesLoading').textContent = 'Could not load new releases.';
   }
+}
+
+async function enrichDiscoveryItems(items, headers) {
+  const today = new Date().toISOString().slice(0,10);
+
+  return Promise.all(items.map(async item => {
+    const enriched = {
+      ...item,
+      discoveryPlatforms: [],
+      discoveryPlatformInfo: {},
+      inCinemas: false,
+    };
+    try {
+      const r = await fetch(
+        `https://api.themoviedb.org/3/${item.media_type}/${item.id}/watch/providers`,
+        { headers }
+      );
+      if (!r.ok) return enriched;
+      const d = await r.json();
+      const gb = (d.results || {}).GB || {};
+
+      // Track which category each provider appears under
+      const providerType = new Map();
+      (gb.flatrate || []).forEach(p => { if (!providerType.has(p.provider_id)) providerType.set(p.provider_id, 'sub'); });
+      (gb.free     || []).forEach(p => { if (!providerType.has(p.provider_id)) providerType.set(p.provider_id, 'free'); });
+      (gb.ads      || []).forEach(p => { if (!providerType.has(p.provider_id)) providerType.set(p.provider_id, 'free'); });
+      (gb.rent     || []).forEach(p => { if (!providerType.has(p.provider_id)) providerType.set(p.provider_id, 'rent'); });
+      (gb.buy      || []).forEach(p => { if (!providerType.has(p.provider_id)) providerType.set(p.provider_id, 'buy'); });
+
+      Object.entries(UK_PROVIDERS).forEach(([key, prov]) => {
+        if (prov.id !== -1 && providerType.has(prov.id)) {
+          enriched.discoveryPlatforms.push(key);
+          enriched.discoveryPlatformInfo[key] = providerType.get(prov.id);
+        }
+      });
+
+      // "In cinemas": movie released in last 120 days with no GB streaming yet
+      const releaseDate = item.release_date || item.first_air_date || '';
+      const isRecent = releaseDate && releaseDate <= today &&
+        releaseDate >= new Date(Date.now() - 120*24*60*60*1000).toISOString().slice(0,10);
+      if (item.media_type === 'movie' && enriched.discoveryPlatforms.length === 0 && isRecent) {
+        enriched.inCinemas = true;
+      }
+    } catch(e) {}
+    return enriched;
+  }));
 }
 
 function renderDiscoveryRow(scrollId, loadingId, items) {
@@ -3036,24 +3108,47 @@ function renderDiscoveryRow(scrollId, loadingId, items) {
   const scroll = document.getElementById(scrollId);
   if (!items.length) { scroll.style.display = 'none'; return; }
   scroll.style.display = 'flex';
+
   scroll.innerHTML = items.map(item => {
     const title = item.title || item.name || '';
-    const year = (item.release_date || item.first_air_date || '').slice(0,4);
+    const year  = (item.release_date || item.first_air_date || '').slice(0, 4);
     const poster = item.poster_path
       ? `https://image.tmdb.org/t/p/w185${item.poster_path}`
       : null;
     const mediaType = item.media_type || 'movie';
-    // Serialize minimal item data for modal opening
-    const data = JSON.stringify({ id: item.id, title, year, media_type: mediaType,
+
+    // Platform badges — show up to 3 to avoid overflow on narrow cards
+    const platforms    = (item.discoveryPlatforms || []).slice(0, 3);
+    const inCinemas    = item.inCinemas || false;
+    const hasStreaming = platforms.length > 0;
+
+    let badgeHtml = '';
+    if (inCinemas && !hasStreaming) {
+      badgeHtml = `<div class="discovery-badge" style="background:rgba(232,184,75,0.9);color:#1a1000">🎬 In cinemas</div>`;
+    } else if (hasStreaming) {
+      badgeHtml = platforms.map(p =>
+        `<div class="discovery-badge badge-${p}">${UK_PROVIDERS[p]?.name || p}</div>`
+      ).join('');
+    }
+
+    // Serialize for modal — include enriched platform data so the modal
+    // shows watch buttons immediately without a second provider fetch
+    const modalData = JSON.stringify({
+      id: item.id, title, year, media_type: mediaType,
       poster_path: item.poster_path, backdrop_path: item.backdrop_path,
       overview: item.overview || '', vote_average: item.vote_average || 0,
-      genre_ids: item.genre_ids || [], platforms: [], platformInfo: {},
-      runtime: null, director: '' }).replace(/"/g,'&quot;');
-    return `<div class="discovery-card" onclick="openModal(${data})">
+      genre_ids: item.genre_ids || [],
+      platforms: item.discoveryPlatforms || [],
+      platformInfo: item.discoveryPlatformInfo || {},
+      runtime: null, director: '',
+    }).replace(/"/g, '&quot;');
+
+    return `<div class="discovery-card" onclick="openModal(${modalData})">
       <div class="discovery-poster">
         ${poster
           ? `<img src="${poster}" alt="${escHtml(title)}" loading="lazy">`
           : `<div class="discovery-poster-fallback">${escHtml(title)}</div>`}
+        ${badgeHtml ? `<div class="discovery-badges">${badgeHtml}</div>` : ''}
       </div>
       <div class="discovery-info">
         <div class="discovery-title">${escHtml(title)}</div>
@@ -3065,9 +3160,13 @@ function renderDiscoveryRow(scrollId, loadingId, items) {
 
 /* ═══════════════════════════════════════════════════════════
    PERSON SEARCH
-   Runs alongside the title search when query matches a person.
-   Uses /search/person to find cast/crew, then renders their
-   known-for titles as a card above the main results grid.
+   When a query matches a person (actor, director, etc.):
+   1. Find them via /search/person
+   2. Fetch their full filmography via /person/{id}/combined_credits
+   3. Enrich with UK watch providers (same pipeline as main search)
+   4. Show a person header card above the results grid
+   5. Add their credits to rawResults so they appear in the grid
+      with platform badges, filters, and watchlist actions
 ═══════════════════════════════════════════════════════════ */
 async function searchPeople(query) {
   if (!query || !settings.tmdbKey) return [];
@@ -3079,8 +3178,54 @@ async function searchPeople(query) {
     );
     if (!r.ok) return [];
     const d = await r.json();
-    return (d.results || []).slice(0, 3); // top 3 person matches
+    return (d.results || []).slice(0, 2); // top 2 person matches
   } catch(e) { return []; }
+}
+
+/* Fetches full filmography for a person and returns enriched items
+   ready for merging into STATE.rawResults */
+async function fetchPersonCredits(personId) {
+  if (!settings.tmdbKey) return [];
+  const headers = { 'Authorization': `Bearer ${settings.tmdbKey}`, 'Accept': 'application/json' };
+  try {
+    const r = await fetch(
+      `https://api.themoviedb.org/3/person/${personId}/combined_credits?language=en-GB`,
+      { headers }
+    );
+    if (!r.ok) return [];
+    const d = await r.json();
+
+    // Combine cast + crew credits, dedupe by id+media_type, sort by popularity
+    const seen = new Set();
+    const credits = [...(d.cast || []), ...(d.crew || [])].filter(c => {
+      const key = `${c.media_type}-${c.id}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return (c.media_type === 'movie' || c.media_type === 'tv') && c.poster_path;
+    }).sort((a, b) => (b.popularity || 0) - (a.popularity || 0)).slice(0, 40);
+
+    // Map to standard item shape then enrich with providers
+    const items = credits.map(c => ({
+      id: c.id,
+      title: c.title || c.name || '',
+      year: (c.release_date || c.first_air_date || '').slice(0, 4),
+      media_type: c.media_type,
+      genre_ids: c.genre_ids || [],
+      vote_average: c.vote_average || 0,
+      overview: c.overview || '',
+      poster_path: c.poster_path,
+      backdrop_path: c.backdrop_path || null,
+      platforms: [],
+      platformInfo: {},
+      runtime: null,
+      director: '',
+    }));
+
+    return await enrichWithProviders(items);
+  } catch(e) {
+    console.warn('fetchPersonCredits failed:', e);
+    return [];
+  }
 }
 
 function renderPersonResults(people) {
@@ -3088,19 +3233,19 @@ function renderPersonResults(people) {
   document.querySelectorAll('.person-result').forEach(el => el.remove());
   if (!people.length) return;
 
-  const grid = document.getElementById('resultsGrid');
+  const grid   = document.getElementById('resultsGrid');
   const container = grid.parentElement;
 
   people.forEach(person => {
-    const knownFor = (person.known_for || []).slice(0, 6);
     const photo = person.profile_path
       ? `https://image.tmdb.org/t/p/w185${person.profile_path}`
       : null;
 
     const el = document.createElement('div');
     el.className = 'person-result';
+    el.dataset.personId = person.id;
     el.innerHTML = `
-      <div class="person-header">
+      <div class="person-header" onclick="expandPersonCredits(${person.id}, this)">
         <div class="person-photo">
           ${photo
             ? `<img src="${photo}" alt="${escHtml(person.name)}" loading="lazy">`
@@ -3108,40 +3253,56 @@ function renderPersonResults(people) {
         </div>
         <div class="person-info">
           <div class="person-name">${escHtml(person.name)}</div>
-          <div class="person-dept">${escHtml(person.known_for_department || 'Acting')}</div>
+          <div class="person-dept">${escHtml(person.known_for_department || 'Acting')} · Full filmography shown in results below</div>
         </div>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--muted)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--muted);transition:transform 0.2s" class="chevron">
           <polyline points="9 18 15 12 9 6"/>
         </svg>
-      </div>
-      ${knownFor.length ? `
-      <div class="person-known-for">
-        ${knownFor.map(kf => {
-          const kfTitle = kf.title || kf.name || '';
-          const kfYear = (kf.release_date || kf.first_air_date || '').slice(0,4);
-          const kfPoster = kf.poster_path ? `https://image.tmdb.org/t/p/w185${kf.poster_path}` : null;
-          const kfType = kf.media_type || 'movie';
-          const kfData = JSON.stringify({ id: kf.id, title: kfTitle, year: kfYear,
-            media_type: kfType, poster_path: kf.poster_path, backdrop_path: kf.backdrop_path,
-            overview: kf.overview || '', vote_average: kf.vote_average || 0,
-            genre_ids: kf.genre_ids || [], platforms: [], platformInfo: {},
-            runtime: null, director: '' }).replace(/"/g,'&quot;');
-          return `<div class="discovery-card" style="width:auto" onclick="openModal(${kfData})">
-            <div class="discovery-poster">
-              ${kfPoster
-                ? `<img src="${kfPoster}" alt="${escHtml(kfTitle)}" loading="lazy">`
-                : `<div class="discovery-poster-fallback">${escHtml(kfTitle)}</div>`}
-            </div>
-            <div class="discovery-info">
-              <div class="discovery-title">${escHtml(kfTitle)}</div>
-              <div class="discovery-year">${kfYear}</div>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>` : ''}`;
+      </div>`;
 
     container.insertBefore(el, grid);
   });
+}
+
+/* Called when the user clicks a person card — fetches their full credits
+   and merges into STATE.rawResults, then re-renders. Only runs once per
+   person (subsequent clicks toggle a known-for grid of their top titles). */
+async function expandPersonCredits(personId, headerEl) {
+  // Prevent double-fetching
+  if (headerEl.dataset.expanded === 'true') return;
+  headerEl.dataset.expanded = 'true';
+
+  const chevron = headerEl.querySelector('.chevron');
+  if (chevron) chevron.style.transform = 'rotate(90deg)';
+
+  const deptEl = headerEl.querySelector('.person-dept');
+  if (deptEl) deptEl.textContent = (deptEl.textContent.split('·')[0].trim()) + ' · Loading filmography…';
+
+  try {
+    const credits = await fetchPersonCredits(personId);
+
+    // Merge into rawResults, deduping by id+media_type against what's already there
+    const seen = new Set(STATE.rawResults.map(i => `${i.media_type}-${i.id}`));
+    const fresh = credits.filter(i => {
+      const key = `${i.media_type}-${i.id}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    STATE.rawResults.push(...fresh);
+
+    const totalCredits = credits.length;
+    const onPlatform   = credits.filter(i => i.platforms.length > 0).length;
+
+    if (deptEl) deptEl.textContent = (headerEl.querySelector('.person-name')?.textContent || '') +
+      ` · ${totalCredits} credits · ${onPlatform} available on your platforms`;
+
+    applyFilters();
+    showToast(`Added ${fresh.length} titles from this person's filmography`);
+  } catch(e) {
+    if (deptEl) deptEl.textContent = 'Could not load filmography';
+  }
 }
 
 </script>
